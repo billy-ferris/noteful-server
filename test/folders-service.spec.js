@@ -38,7 +38,7 @@ describe.only('Folders Endpoints', () => {
         context(`Given no folders`, () => {
             it(`responds with 200 and an empty list`, () => {
                 return supertest(app)
-                    .get('/folders')
+                    .get('/api/folders')
                     .expect(200, [])
             })
         })
@@ -50,9 +50,9 @@ describe.only('Folders Endpoints', () => {
                     .insert(testFolders)
             })
 
-            it('GET /folders responds with 200 and all of the folders', () => {
+            it('GET /api/folders responds with 200 and all of the folders', () => {
                 return supertest(app)
-                    .get('/folders')
+                    .get('/api/folders')
                     .expect(200, testFolders)
             })
         })
