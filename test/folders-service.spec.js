@@ -25,11 +25,36 @@ describe.only('Folders Endpoints', () => {
             client: 'pg',
             connection: process.env.TEST_DB_URL,
         })
+        app.set('db', db)
     })
 
-    after('disconnect from dv', () => db.destoy())
+    after('disconnect from dv', () => db.destroy())
 
-    before('clean the table', () => db('noteful_folders').truncate())
+    before('clean the table', () => db.raw('TRUNCATE noteful_notes, noteful_folders RESTART IDENTITY CASCADE'))
 
-    afterEach('cleanup', () => db.raw('TRUNCATE blogful_articles, blogful_users, blogful_comments RESTART IDENTITY CASCADE'))
+    afterEach('cleanup', () => db.raw('TRUNCATE noteful_notes, noteful_folders RESTART IDENTITY CASCADE'))
+
+    describe(`GET /api/folders endpoint`, () => {
+        context(`Given no folders`, () => {
+            it(`responds with 200 and an empty list`, () => {
+                return supertest(app)
+                    .get('/folders')
+                    .expect(200, [])
+            })
+        })
+
+        context(`Given there are folders are in the database`, () => {
+            beforeEach('insert folders', () => {
+                return db
+                    .into('noteful_folders')
+                    .insert(testFolders)
+            })
+
+            it('GET /folders responds with 200 and all of the folders', () => {
+                return supertest(app)
+                    .get('/folders')
+                    .expect(200, testFolders)
+            })
+        })
+    })
 })
