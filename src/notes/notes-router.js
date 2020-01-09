@@ -15,13 +15,17 @@ notesRouter
         .catch(next)
     })
     .post(jsonParser, (req, res, next) => {
-        const { note_name } = req.body
-        const newNote = { note_name }
-        if (!note_name) {
-            return res.status(400).json({
-                error: { message: `Missing 'note_name' in request body` }
-            })
+        const { note_name, content, folder_id } = req.body
+        const newNote = { note_name, content, folder_id }
+        
+        for (const [key, value] of Object.entries(newNote)) {
+            if (value == null) {
+                return res.status(400).json({
+                    error: { message: `Missing '${key}' in request body` }
+                })
+            }
         }
+
         NotesService.insertNote(
             req.app.get('db'),
             newNote
@@ -67,13 +71,13 @@ notesRouter
             .catch(next)
     })
     .patch(jsonParser, (req, res, next) => {
-        const { note_name } = req.body
-        const noteToUpdate = { note_name }
+        const { note_name, content, folder_id } = req.body
+        const noteToUpdate = { note_name, content, folder_id }
 
         const numberOfValues = Object.values(noteToUpdate).filter(Boolean).length
         if (numberOfValues === 0) {
             return res.status(400).json({
-                error: { message: 'Request body must contain a title' }
+                error: { message: `Request body must contain 'note_name', and 'folder_id'` }
             })
         }
 

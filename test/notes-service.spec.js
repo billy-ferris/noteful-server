@@ -1,5 +1,4 @@
 process.env.TZ = 'UTC'
-require('dotenv').config()
 const { expect } = require('chai')
 const knex = require('knex')
 const app = require('../src/app')
@@ -94,9 +93,19 @@ describe.only('Notes Endpoints', () => {
     })
 
     describe(`POST /api/notes endpoint`, () => {
+        const testFolders = makeFoldersArray()
+        
+        beforeEach('insert folders', () => {
+            return db
+                .into('noteful_folders')
+                .insert(testFolders)
+        })
+        
         it('creates a note, responding with 201 and the new note', () => {
             const newNote = {
-                note_name: 'POST test note'
+                note_name: 'POST test note',
+                folder_id: 1,
+                content: 'testing content desc...',
             }
             return supertest(app)
                 .post('/api/notes')
@@ -104,8 +113,13 @@ describe.only('Notes Endpoints', () => {
                 .expect(201)
                 .expect(res => {
                     expect(res.body.note_name).to.eql(newNote.note_name)
+                    expect(res.body.content).to.eql(newNote.content)
+                    expect(res.body.folder_id).to.eql(newNote.folder_id)
                     expect(res.body).to.have.property('id')
                     expect(res.headers.location).to.eql(`/api/notes/${res.body.id}`)
+                    const expected = new Date().toLocaleString()
+                    const actual = new Date(res.body.modified).toLocaleString()
+                    expect(actual).to.eql(expected)
                 })
                 .then(postRes =>
                     supertest(app)
@@ -114,13 +128,25 @@ describe.only('Notes Endpoints', () => {
                 )
         })
 
-        it(`responds with 400 and an error message when the 'note_name' is missing`, () => {
-            return supertest(app)
-                .post('/api/notes')
-                .send({ })
-                .expect(400, {
-                    error: { message: `Missing 'note_name' in request body` }
-                })
+        const requiredFields = ['note_name', 'content', 'folder_id']
+
+        requiredFields.forEach(field => {
+            const newNote = {
+                note_name: 'POST test note',
+                folder_id: 1,
+                content: 'testing content desc...'
+            }
+
+            it(`responds with 400 and an error message when the '${field}' is missing`, () => {
+                delete newNote[field]
+
+                return supertest(app)
+                    .post('/api/notes')
+                    .send(newNote)
+                    .expect(400, {
+                        error: { message: `Missing '${field}' in request body` }
+                    })
+            })
         })
     })
 
@@ -166,46 +192,52 @@ describe.only('Notes Endpoints', () => {
         })
     })
 
-    // describe(`PATCH /api/notes endpoint`, () => {
-    //     context(`Given no notes`, () => {
-    //         it(`responds with 404`, () => {
-    //             const noteId = 123456
-    //             return supertest(app)
-    //                 .get(`/api/notes/${noteId}`)
-    //                 .expect(404, {
-    //                     error: { message: `Note doesn't exist` }
-    //                 })
-    //         })
-    //     })
+    describe.only(`PATCH /api/notes endpoint`, () => {
+        context(`Given no notes`, () => {
+            it(`responds with 404`, () => {
+                const noteId = 123456
+                return supertest(app)
+                    .get(`/api/notes/${noteId}`)
+                    .expect(404, {
+                        error: { message: `Note doesn't exist` }
+                    })
+            })
+        })
 
-    //     context('Given there are notes in the database', () => {
-    //         const testNotes = makeNotesArray()
+        context('Given there are notes in the database', () => {
+            const testFolders = makeFoldersArray()
+            const testNotes = makeNotesArray()
 
-    //         beforeEach('insert notes', () => {
-    //             return db
-    //                 .into('noteful_notes')
-    //                 .insert(testNotes)
-    //         })
+            beforeEach('insert notes', () => {
+                return db
+                    .into('noteful_folders')
+                    .insert(testFolders)
+                    .then(() => {
+                        return db
+                            .into('noteful_notes')
+                            .insert(testNotes)
+                    })
+            })
 
-    //         it.skip('responds with 204 and updates the note', () => {
-    //             const idToUpdate = 3
-    //             const updatedNote = {
-    //                 title: 'updated title',
-    //             }
-    //             const expectedNote = {
-    //                 ...testNotes[idToUpdate - 1],
-    //                 ...updatedNote
-    //             }
-    //             return supertest(app)
-    //                 .patch(`/api/notes/${idToUpdate}`)
-    //                 .send(updatedNote)
-    //                 .expect(204)
-    //                 .then(res =>
-    //                     supertest(app)
-    //                         .get(`/api/notes/${idToUpdate}`)
-    //                         .expect(expectedNote)    
-    //                 )
-    //         })
-    //     })
-    // })
+            it('responds with 204 and updates the note', () => {
+                const idToUpdate = 4
+                const updatedNote = {
+                    note_name: 'updated name',
+                }
+                const expectedNote = {
+                    ...testNotes[idToUpdate - 1],
+                    ...updatedNote
+                }
+                return supertest(app)
+                    .patch(`/api/notes/${idToUpdate}`)
+                    .send(updatedNote)
+                    .expect(204)
+                    .then(res =>
+                        supertest(app)
+                            .get(`/api/notes/${idToUpdate}`)
+                            .expect(expectedNote)    
+                    )
+            })
+        })
+    })
 })
