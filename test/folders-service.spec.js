@@ -45,4 +45,36 @@ describe.only('Folders Endpoints', () => {
             })
         })
     })
+
+    describe(`GET /api/folders/:folder_id endpoint`, () => {
+        context(`Given no folders`, () => {
+            it(`responds with 404`, () => {
+                const folderId = 123456
+                return supertest(app)
+                    .get(`/api/folders/${folderId}`)
+                    .expect(404, {
+                        error: { message: `Folder doesn't exist` }
+                    })
+            })
+        })
+
+        context(`Given there are folders in the database`, () => {
+            const testFolders = makeFoldersArray()
+
+            beforeEach('insert folders', () => {
+                return db
+                    .into('noteful_folders')
+                    .insert(testFolders)
+            })
+
+            it(`responds with 200 and expected folder`, () => {
+                const folderId = 2
+                const expectedFolder = testFolders[folderId - 1]
+
+                return supertest(app)
+                    .get(`/api/folders/${folderId}`)
+                    .expect(200, expectedFolder)
+            })
+        })
+    })
 })
