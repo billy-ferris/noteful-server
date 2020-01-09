@@ -77,4 +77,26 @@ describe.only('Folders Endpoints', () => {
             })
         })
     })
+
+    describe.only(`POST /api/folders endpoint`, () => {
+        it('creates a folder, responding with 201 and the new folder', () => {
+            const newFolder = {
+                folder_name: 'POST test folder'
+            }
+            return supertest(app)
+                .post('/api/folders')
+                .send(newFolder)
+                .expect(201)
+                .expect(res => {
+                    expect(res.body.folder_name).to.eql(newFolder.folder_name)
+                    expect(res.body).to.have.property('id')
+                    expect(res.headers.location).to.eql(`/api/folders/${res.body.id}`)
+                })
+                .then(postRes =>
+                    supertest(app)
+                        .get(`/api/folders/${postRes.body.id}`)
+                        .expect(postRes.body)   
+                )
+        })
+    })
 })
