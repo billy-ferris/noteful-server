@@ -37,7 +37,7 @@ foldersRouter
 
 foldersRouter
     .route('/:folder_id')
-    .get((req, res, next) => {
+    .all((req, res, next) => {
         FoldersService.getById(
             req.app.get('db'),
             req.params.folder_id
@@ -48,7 +48,42 @@ foldersRouter
                         error: { message: `Folder doesn't exist` }
                     })
                 }
-                res.json(folder)
+                res.folder = folder
+                next()
+            })
+            .catch(next)
+    })
+    .get((req, res, next) => {
+        res.json(res.folder)
+    })
+    .delete((req, res, next) => {
+        FoldersService.deleteFolder(
+            req.app.get('db'),
+            req.params.folder_id
+        )
+            .then(() => {
+                res.status(204).end()
+            })
+            .catch(next)
+    })
+    .patch(jsonParser, (req, res, next) => {
+        const { folder_name } = req.body
+        const folderToUpdate = { folder_name }
+
+        const numberOfValues = Object.values(folderToUpdate).filter(Boolean).length
+        if (numberOfValues === 0) {
+            return res.status(400).json({
+                error: { message: 'Request body must contain a title' }
+            })
+        }
+
+        FoldersService.updateFolder(
+            req.app.get('db'),
+            req.params.folder_id,
+            folderToUpdate
+        )
+            .then(numRowsAffected => {
+                res.status(204).end()
             })
             .catch(next)
     })

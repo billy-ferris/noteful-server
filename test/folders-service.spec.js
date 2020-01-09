@@ -78,7 +78,7 @@ describe.only('Folders Endpoints', () => {
         })
     })
 
-    describe.only(`POST /api/folders endpoint`, () => {
+    describe(`POST /api/folders endpoint`, () => {
         it('creates a folder, responding with 201 and the new folder', () => {
             const newFolder = {
                 folder_name: 'POST test folder'
@@ -97,6 +97,94 @@ describe.only('Folders Endpoints', () => {
                         .get(`/api/folders/${postRes.body.id}`)
                         .expect(postRes.body)   
                 )
+        })
+
+        it(`responds with 400 and an error message when the 'folder_name' is missing`, () => {
+            return supertest(app)
+                .post('/api/folders')
+                .send({ })
+                .expect(400, {
+                    error: { message: `Missing 'folder_name' in request body` }
+                })
+        })
+    })
+
+    describe(`DELETE /api/folders endpoint`, () => {
+        context(`Given no folders`, () => {
+            it(`responds with 404`, () => {
+                const folderId = 123456
+                return supertest(app)
+                    .get(`/api/folders/${folderId}`)
+                    .expect(404, {
+                        error: { message: `Folder doesn't exist` }
+                    })
+            })
+        })
+
+        context('Given there are folders in the database', () => {
+            const testFolders = makeFoldersArray()
+
+            beforeEach('insert folders', () => {
+                return db
+                    .into('noteful_folders')
+                    .insert(testFolders)
+            })
+
+            it('responds with 204 and removes the folder', () => {
+                const idToRemove = 2
+                const expectedFolders = testFolders.filter(folder => folder.id !== idToRemove)
+                return supertest(app)
+                    .delete(`/api/folders/${idToRemove}`)
+                    .expect(204)
+                    .then(res =>
+                        supertest(app)
+                            .get(`/api/folders`)
+                            .expect(expectedFolders)
+                    )
+            })
+        })
+    })
+
+    describe(`PATCH /api/folders endpoint`, () => {
+        context(`Given no folders`, () => {
+            it(`responds with 404`, () => {
+                const folderId = 123456
+                return supertest(app)
+                    .get(`/api/folders/${folderId}`)
+                    .expect(404, {
+                        error: { message: `Folder doesn't exist` }
+                    })
+            })
+        })
+
+        context('Given there are folders in the database', () => {
+            const testFolders = makeFoldersArray()
+
+            beforeEach('insert folders', () => {
+                return db
+                    .into('noteful_folders')
+                    .insert(testFolders)
+            })
+
+            it.skip('responds with 204 and updates the folder', () => {
+                const idToUpdate = 3
+                const updatedFolder = {
+                    title: 'updated title',
+                }
+                const expectedFolder = {
+                    ...testFolders[idToUpdate - 1],
+                    ...updatedFolder
+                }
+                return supertest(app)
+                    .patch(`/api/folders/${idToUpdate}`)
+                    .send(updatedFolder)
+                    .expect(204)
+                    .then(res =>
+                        supertest(app)
+                            .get(`/api/folders/${idToUpdate}`)
+                            .expect(expectedFolder)    
+                    )
+            })
         })
     })
 })
