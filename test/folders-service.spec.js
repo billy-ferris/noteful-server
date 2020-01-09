@@ -1,24 +1,10 @@
 const { expect } = require('chai')
 const knex = require('knex')
 const app = require('../src/app')
+const { makeFoldersArray } = require('./folders.fixtures')
 
 describe.only('Folders Endpoints', () => {
     let db
-
-    let testFolders = [
-        {
-            folder_name: 'Important',
-            id: 1
-        },
-        {
-            folder_name: 'To Do',
-            id: 2
-        },
-        {
-            folder_name: 'Miscellaneous',
-            id: 3
-        }
-    ];
 
     before('make knex instance', () => {
         db = knex({
@@ -28,7 +14,7 @@ describe.only('Folders Endpoints', () => {
         app.set('db', db)
     })
 
-    after('disconnect from dv', () => db.destroy())
+    after('disconnect from db', () => db.destroy())
 
     before('clean the table', () => db.raw('TRUNCATE noteful_notes, noteful_folders RESTART IDENTITY CASCADE'))
 
@@ -44,6 +30,8 @@ describe.only('Folders Endpoints', () => {
         })
 
         context(`Given there are folders are in the database`, () => {
+            const testFolders = makeFoldersArray()
+
             beforeEach('insert folders', () => {
                 return db
                     .into('noteful_folders')
